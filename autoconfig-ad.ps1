@@ -1,32 +1,48 @@
-﻿Get-NetAdapter
-Write-Host "---- Configuration réseau ----"
-$index = Read-Host "index "
-$ip = Read-Host "ip "
-$prefixLenght = Read-Host "Mask (/24) without / "
-$gateway = Read-Host "Gateway "
+# Prompt for network configuration
+Get-NetAdapter
 
-New-NetIPAddress -InterfaceIndex $index -IPAddress $ip -PrefixLength $prefixLenght -DefaultGateway $gateway
+Write-Host "---- Configuration réseau ----"
+$index = Read-Host "Index"
+$ip = Read-Host "IP"
+$prefixLength = Read-Host "Mask (/24) without /"
+$gateway = Read-Host "Gateway"
+
+# Configure network
+New-NetIPAddress -InterfaceIndex $index -IPAddress $ip -PrefixLength $prefixLength -DefaultGateway $gateway
 Write-Host "---- Fin configuration réseau ----"
 
-Add-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools -IncludeAllSubFeature
-Add-WindowsFeature -Name DNS -IncludeManagementTools -IncludeAllSubFeature
-Add-WindowsFeature -Name RSAT-AD-Tools -IncludeManagementTools -IncludeAllSubFeature
-$CreateDnsDelegation = $false
-$domain_name = Read-Host "Enter domain name w/o extension "
-$extension = Read-Host "Enter extension "
-$DomainName = "$domain_name.$extension"
-$NetbiosName = "$domain_name"
-$NTDSPath = "C:\Windows\NTDS"
-$LogPath = "C:\Windows\NTDS"
-$SysvolPath = "C:\Windows\SYSVOL"
-$DomainMode = "Default"
-$InstallDNS = $true
-$ForestMode = "Default"
-$NoRebootOnCompletion = $false
-$strong_passwd = Read-Host "Enter passwd "
-$SafeModeClearPassword = "$strong_passwd"
-$SafeModeAdministratorPassword = ConvertTo-SecureString $SafeModeClearPassword -AsPlaintext -Force
+# Install required Windows features
+$features = @(
+    "AD-Domain-Services",
+    "DNS",
+    "RSAT-AD-Tools"
+)
 
+Add-WindowsFeature -Name $features -IncludeManagementTools -IncludeAllSubFeature
+
+# Active Directory Configuration
+Write-Host "---- Configuration Active Directory ----"
+$CreateDnsDelegation = $false
+$domainName = Read-Host "Enter domain name w/o extension"
+$extension = Read-Host "Enter extension"
+$fullDomainName = "$domainName.$extension"
+$netbiosName = $domainName
+$ntdsPath = "C:\Windows\NTDS"
+$logPath = "C:\Windows\NTDS"
+$sysvolPath = "C:\Windows\SYSVOL"
+$domainMode = "Default"
+$installDNS = $true
+$forestMode = "Default"
+$noRebootOnCompletion = $false
+$strongPassword = Read-Host "Enter password"
+$safeModeClearPassword = "$strongPassword"
+$safeModeAdministratorPassword = ConvertTo-SecureString $safeModeClearPassword -AsPlaintext -Force
+
+# Import ADDSDeployment module
 Import-Module ADDSDeployment
-Install-ADDSForest -CreateDnsDelegation:$CreateDnsDelegation -DomainName $DomainName -DatabasePath $NTDSPath -DomainMode $DomainMode -DomainNetbiosName $NetbiosName -ForestMode $ForestMode -InstallDNS:$InstallDNS -LogPath $LogPath -NoRebootOnCompletion:$NoRebootOnCompletion -SysvolPath $SysvolPath -SafeModeAdministratorPassword $SafeModeAdministratorPassword -Force:$true
+
+# Install Active Directory Domain Services
+Install-ADDSForest -CreateDnsDelegation:$CreateDnsDelegation -DomainName $fullDomainName -DatabasePath $ntdsPath -DomainMode $domainMode -DomainNetbiosName $netbiosName -ForestMode $forestMode -InstallDNS:$installDNS -LogPath $logPath -NoRebootOnCompletion:$noRebootOnCompletion -SysvolPath $sysvolPath -SafeModeAdministratorPassword $safeModeAdministratorPassword -Force:$true
+
+# Restart the computer
 Restart-Computer
